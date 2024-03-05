@@ -40,27 +40,30 @@ class Protocol():
         return encrypted#Returns the encrypted message
 
     def decrypt(self, ciphertext, key):
-        iv = ciphertext[-16:]
+        """Given some ciphertext and a key, decrypts the ciphertext and returns plaintext."""
+        iv = ciphertext[-16:]#Slices the ciphertext to retrieves the initialisation vector
         print(f"Passed ciphertext: {ciphertext}")
-        messageSize = len(ciphertext)-16
+        messageSize = len(ciphertext)-16#Determines the size of the encrypted message without the IV
         print(f"Messsge Size: {messageSize}")
-        ciphertext = ciphertext[0:messageSize]
+        ciphertext = ciphertext[0:messageSize]#Slices the ciphertext to retrieve just the encrypted message
         print(f"Actual Ciphertext: {ciphertext}")
         print(f"Initial Vector: {iv}")
-        cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
-        decryptor = cipher.decryptor()
-        paddedPlaintext = decryptor.update(ciphertext) + decryptor.finalize()
-        unpadder = padding.PKCS7(128).unpadder()
-        plaintext = unpadder.update(paddedPlaintext) + unpadder.finalize()
-        plaintext = plaintext.decode("utf-8")
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv))#Recreates the cipher that was used to encrypt the message
+        decryptor = cipher.decryptor()#Creates a decryptor using the cipher
+        paddedPlaintext = decryptor.update(ciphertext) + decryptor.finalize()#Decrypts the ciphertext
+        unpadder = padding.PKCS7(128).unpadder()#Creates an unpadder object
+        plaintext = unpadder.update(paddedPlaintext) + unpadder.finalize()#Removes the padding from the message
+        plaintext = plaintext.decode("utf-8")#Converts the message from a bytestring to a string
         print(f"Plaintext: {plaintext}")
-        return plaintext
+        return plaintext#Returns the decrypted message
     
     def serialize(self, x):
+        """Given some input, returns a serialized version using OpenSSH."""
         return x.public_bytes(
             encoding=serialization.Encoding.OpenSSH, 
             format=serialization.PublicFormat.OpenSSH
             )
     
     def deserialize(self, x):
+        """Given some OpenSSH serialized input, returns a deserialized version."""
         return serialization.load_ssh_public_key(x)
