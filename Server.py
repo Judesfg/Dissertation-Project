@@ -36,19 +36,23 @@ class Server(Node):
             print("Connection accepted...")
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the client socket to use the same port more than once
             print("Recieving key...")
-            serializedKey = self.socket.recv(self.publicKeySize)#Recieves the public key from the client
+            serializedKey = self.socket.recv(self.cPublicKeySize+self.qPublicKeySize)#Recieves the public key from the client
             print("Key recieved.")
-            key = self.protocol.deserialize(serializedKey)#Deserializes the public key
-            print("Peer public key deserialized.")
-            serializedKey = self.protocol.serialize(self.get_public_key())#Serializes the server's own public key
-            self.socket.send(serializedKey)#Server responds to the client with its own public key
+            #deserializedKey = self.protocol.deserialize(serializedKey)#Deserializes the public key
+            print("Peer public keys deserialized.")
+            classicalKey = self.protocol.deserialize(serializedKey[:self.cPublicKeySize])
+            quantumKey = serializedKey[self.qPublicKeySize:]#self.protocol.deserialize(serializedKey[self.qPublicKeySize:])
+            cSerializedKey = self.protocol.serialize(self.get_classical_public_key())#Serializes classical public key
+            qSerializedKey = self.get_quantum_public_key()#self.protocol.serialize(self.get_quantum_public_key())#Serializes quantum public key
+            self.socket.send(cSerializedKey+qSerializedKey)#Server responds to the client with its own public key
         except Exception as e:
             print(f"Error: {e}")
             key = None
         finally:
             serverSocket.close()#Closes connection
             self.socket.close()#Closes connection
-            self.set_peer_public_key(key)#Sets peer public key as an instance variable
+            self.set_classical_peer_public_key(classicalKey)#Sets classical peer public key as an instance variable
+            self.set_quantum_peer_public_key(quantumKey)#Sets quantum peer public key as an instance variable
 
     def run_server(self):
         """Runs on a loop once the initial handshake has been performed. At this point

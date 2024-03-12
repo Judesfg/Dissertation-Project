@@ -34,9 +34,7 @@ class Protocol():
         encrypted = encryptor.update(paddedData) + encryptor.finalize()#Uses the encryptor to encrypt the padded message
         print(f"Base ciphertext: {encrypted}")
         encrypted += iv#Appends the initialisation vector to the encrypted message
-        print(f"Ciphertext Size: {sys.getsizeof(encrypted)}")
-        print(f"Actual Ciphertext: {encrypted}")
-        print(f"Initial Vector: {iv}")
+        print(f"Ciphertext Size: {sys.getsizeof(encrypted)}\nActual Ciphertext: {encrypted}\nInitial Vector: {iv}")
         return encrypted#Returns the encrypted message
 
     def decrypt(self, ciphertext, key):
