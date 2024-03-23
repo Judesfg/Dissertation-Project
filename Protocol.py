@@ -16,6 +16,7 @@ import os
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.backends import default_backend
 
 class Protocol():
     def __init__(self):
@@ -49,6 +50,7 @@ class Protocol():
         cipher = Cipher(algorithms.AES(key), modes.CBC(iv))#Recreates the cipher that was used to encrypt the message
         decryptor = cipher.decryptor()#Creates a decryptor using the cipher
         paddedPlaintext = decryptor.update(ciphertext) + decryptor.finalize()#Decrypts the ciphertext
+        print(f"Decryption successful. Padded plaintext: {paddedPlaintext}")
         unpadder = padding.PKCS7(128).unpadder()#Creates an unpadder object
         plaintext = unpadder.update(paddedPlaintext) + unpadder.finalize()#Removes the padding from the message
         plaintext = plaintext.decode("utf-8")#Converts the message from a bytestring to a string
@@ -56,12 +58,12 @@ class Protocol():
         return plaintext#Returns the decrypted message
     
     def serialize(self, x):
-        """Given some input, returns a serialized version using OpenSSH."""
+        """Given some input, returns a serialized version using PEM."""
         return x.public_bytes(
-            encoding=serialization.Encoding.OpenSSH, 
-            format=serialization.PublicFormat.OpenSSH
+            encoding=serialization.Encoding.PEM, 
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
             )
     
     def deserialize(self, x):
-        """Given some OpenSSH serialized input, returns a deserialized version."""
-        return serialization.load_ssh_public_key(x)
+        """Given some PEM serialized input, returns a deserialized version."""
+        return serialization.load_pem_public_key(x, default_backend())

@@ -26,7 +26,9 @@ class Node():
         self.symmetricKey = None
         self.peerPublicKey = None
         self.cPublicKeySize = 384
-        self.qPublicKeySize = 1024
+        self.serializedCKeySize = 215
+        self.qPublicKeySize = 1568
+        self.qSharedKeySize = 32
         self.generate_asymmetric_keys()
 
     def set_symmetric_key(self, key):
@@ -50,6 +52,10 @@ class Node():
     def set_quantum_peer_public_key(self, key):
         """Setter method for cPeerPublicKey."""
         self.qPeerPublicKey = key
+
+    def set_quantum_shared_key(self, key):
+        """Setter method for qSharedKey."""
+        self.qSharedKey = key
 
     def get_symmetric_key(self):
         """Returns the variable symmetricKey."""
@@ -79,12 +85,20 @@ class Node():
         """Returns the variable qPeerPublicKey."""
         return self.qPeerPublicKey
     
+    def get_quantum_shared_key(self):
+        """Returns the variable qSharedKey."""
+        return self.qSharedKey
+    
     def generate_symmetric_key(self):
         """Derives a shared key with a peer, using the privateKey and publicKey instance 
         variables."""
-        cSharedKey = self.get_classical_private_key().exchange(ec.ECDH(), self.get_classical_peer_public_key())#Performs elliptic curve diffie-hellman (ECDH) using the peer public key and own private key
-        #qSharedKey = self.get_quantum_private_key().exchange(ec.ECDH(), self.get_quantum_peer_public_key())
-        derivedKey = HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=b'handshake data').derive(cSharedKey)#Uses a key derivation function (HKDF) to generate the final shared key
+        peer_public_key = self.get_classical_peer_public_key()
+        private_key = self.get_classical_private_key()
+        print(f"Peer public key: {peer_public_key}\nprivate key : {private_key}")
+        cSharedKey = private_key.exchange(ec.ECDH(), peer_public_key)#Performs elliptic curve diffie-hellman (ECDH) using the peer public key and own private key
+        qSharedKey = self.get_quantum_shared_key()
+        print(f"Shared quantum key: {qSharedKey}\nSize: {len(qSharedKey)}")
+        derivedKey = HKDF(algorithm=hashes.SHA256(), length=32, salt=qSharedKey, info=b'handshake data').derive(cSharedKey)#Uses a key derivation function (HKDF) to generate the final shared key
         self.set_symmetric_key(derivedKey)#Sets the derived key as an instance variable
         print(f"Symmetric key successfully derived...\nKey: {derivedKey}")
 
@@ -96,6 +110,7 @@ class Node():
         self.set_classical_asymmetric_keys(privateKey, publicKey)#Sets the classical public and private keys as instance variables
         print("Classical key pair successfully generated.")
         publicKey, privateKey = generate_keypair()#Generates a quantum key pair using Kyber1024
+        print(f"Original Kyber key length: {len(publicKey)}")
         self.set_quantum_asymmetric_keys(privateKey, publicKey)#Sets the quantum public and private keys as instance variablers
         print("Quantum key pair successfully generated.")
 

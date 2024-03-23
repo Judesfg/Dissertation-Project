@@ -20,6 +20,8 @@ class Client(Node):
     def __init__(self) -> None:
         """Creates an instance of the Client class, inheriting from the Node superclass."""
         super().__init__()
+        self.nodeType = 'CLIENT' #Create an ENUM for this
+        print("Serializing public key")
         self.send_key()
         self.generate_symmetric_key()
         self.run_client()
@@ -33,22 +35,22 @@ class Client(Node):
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#Creates a new instance of the socket class
             self.socket.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the socket to use the same port more than once
             self.socket.connect((self.ip, self.handshakePort))#Binds the socket to the given ip address and port
-            print("Serializing public key")#Server listens for activity on this port. The parameter 0 means there can be no backlog queue
             cSerializedKey = self.protocol.serialize(self.get_classical_public_key())#Serializes classical public key
-            qSerializedKey = self.get_quantum_public_key()#self.protocol.serialize(self.get_quantum_public_key())#Serializes quantum public key
+            keys = cSerializedKey
+            size = len(keys)
             print("Sending key")
-            self.socket.send(cSerializedKey+qSerializedKey)#Sends the serialized public keys
-            print("Key sent.")
-            serializedKey = self.socket.recv(self.cPublicKeySize+self.qPublicKeySize)#Recieves the server's public key
-            #deserializedKey = self.protocol.deserialize(serializedKey)#Deserializes the recieved package
-            classicalKey = self.protocol.deserialize(serializedKey[:self.cPublicKeySize])#Slices the package and deserializes to retrieve the classical key
-            quantumKey = serializedKey[self.qPublicKeySize:]#self.protocol.deserialize(serializedKey[self.qPublicKeySize:])#Slices the  package and deserializes to retrieve the quantum key
+            self.socket.send(keys)#Sends the serialized public keys
+            size += self.qSharedKeySize
+            serializedKey = self.socket.recv(size)#Recieves the server's public key
+            quantumKey = serializedKey[(size-self.qSharedKeySize):]
+            classicalKey = self.protocol.deserialize(serializedKey[:self.serializedCKeySize])
+            print(f"Quantum Key extracted, Size: {len(quantumKey)}\nQuantum Key: {quantumKey}\n\nClassical Key: {classicalKey}")
         except Exception as e:
             print(f"Error: {e}")
         finally:
             self.socket.close()#Closes connection to the server
             self.set_classical_peer_public_key(classicalKey)#Sets the server's classical public key as an instance variable
-            self.set_quantum_peer_public_key(quantumKey)#Sets the server's quantum public key as an instance variable
+            self.set_quantum_shared_key(quantumKey)#Sets the server's quantum public key as an instance variable
 
     def run_client(self):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#Creates a new instance of the socket class
