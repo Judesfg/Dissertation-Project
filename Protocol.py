@@ -26,31 +26,32 @@ class Protocol():
 
     def encrypt(self, plaintext, key):
         """Takes some plaintext and a key, and encrypts the plaintext using AES with CBC."""
+        print(f"\n\nBeginning Encryption...\n\nPassed plaintext: {plaintext}")
         padder = padding.PKCS7(128).padder()#Creates a padder object
         paddedData = padder.update(plaintext.encode("utf-8")) + padder.finalize()#Pads the data to be used with a 128bit block cipher
-        iv = os.urandom(16)#Generates a random 16byte initialisation vector
-        print(f"Padded Message Size: {sys.getsizeof(paddedData)}")
+        iv = os.urandom(16)#Generates a random 16 byte initialisation vector
+        print(f"Padded Message Size: {sys.getsizeof(paddedData)} bytes")
         cipher = Cipher(algorithms.AES(key), modes.CBC(iv))#Creates a cipher using the advanced encryption scheme (AES) with cipher block chaining (CBC)
         encryptor = cipher.encryptor()#Creates an encryptor using the cipher
         encrypted = encryptor.update(paddedData) + encryptor.finalize()#Uses the encryptor to encrypt the padded message
         print(f"Base ciphertext: {encrypted}")
         encrypted += iv#Appends the initialisation vector to the encrypted message
-        print(f"Ciphertext Size: {sys.getsizeof(encrypted)}\nActual Ciphertext: {encrypted}\nInitial Vector: {iv}")
+        print(f"Ciphertext Size: {sys.getsizeof(encrypted)} bytes\nInitial Vector: {iv}\nActual Ciphertext: {encrypted}")
         return encrypted#Returns the encrypted message
 
     def decrypt(self, ciphertext, key):
         """Given some ciphertext and a key, decrypts the ciphertext and returns plaintext."""
         iv = ciphertext[-16:]#Slices the ciphertext to retrieves the initialisation vector
-        print(f"Passed ciphertext: {ciphertext}")
+        print(f"\n\nBeginning Decryption...\n\nPassed ciphertext: {ciphertext}")
         messageSize = len(ciphertext)-16#Determines the size of the encrypted message without the IV
-        print(f"Messsge Size: {messageSize}")
+        print(f"Messsge Size: {messageSize} bytes")
         ciphertext = ciphertext[0:messageSize]#Slices the ciphertext to retrieve just the encrypted message
         print(f"Actual Ciphertext: {ciphertext}")
         print(f"Initial Vector: {iv}")
         cipher = Cipher(algorithms.AES(key), modes.CBC(iv))#Recreates the cipher that was used to encrypt the message
         decryptor = cipher.decryptor()#Creates a decryptor using the cipher
         paddedPlaintext = decryptor.update(ciphertext) + decryptor.finalize()#Decrypts the ciphertext
-        print(f"Decryption successful. Padded plaintext: {paddedPlaintext}")
+        print(f"Decryption successful.")
         unpadder = padding.PKCS7(128).unpadder()#Creates an unpadder object
         plaintext = unpadder.update(paddedPlaintext) + unpadder.finalize()#Removes the padding from the message
         plaintext = plaintext.decode("utf-8")#Converts the message from a bytestring to a string

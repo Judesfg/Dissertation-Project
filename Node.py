@@ -94,13 +94,11 @@ class Node():
         variables."""
         peer_public_key = self.get_classical_peer_public_key()
         private_key = self.get_classical_private_key()
-        print(f"Peer public key: {peer_public_key}\nprivate key : {private_key}")
         cSharedKey = private_key.exchange(ec.ECDH(), peer_public_key)#Performs elliptic curve diffie-hellman (ECDH) using the peer public key and own private key
         qSharedKey = self.get_quantum_shared_key()
-        print(f"Shared quantum key: {qSharedKey}\nSize: {len(qSharedKey)}")
         derivedKey = HKDF(algorithm=hashes.SHA256(), length=32, salt=qSharedKey, info=b'handshake data').derive(cSharedKey)#Uses a key derivation function (HKDF) to generate the final shared key
         self.set_symmetric_key(derivedKey)#Sets the derived key as an instance variable
-        print(f"Symmetric key successfully derived...\nKey: {derivedKey}")
+        print(f"Symmetric key successfully derived...\nKey: {derivedKey}\n")
 
     def generate_asymmetric_keys(self):
         """Randomly generates a private key using diffie-hellman and derives its 

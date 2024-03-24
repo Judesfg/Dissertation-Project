@@ -39,12 +39,11 @@ class Server(Node):
             print("Recieving key...")
             serializedKey = self.socket.recv(self.serializedCKeySize)#Recieves the public key from the client
             size = len(serializedKey)
-            print(f"Key recieved, Size: {size}")
+            print("Key recieved.")
             classicalKey = self.protocol.deserialize(serializedKey)
             cSerializedKey = self.protocol.serialize(self.get_classical_public_key())#Serializes classical public key
             encryptedKey, qSharedKey = encrypt(self.get_quantum_public_key())
             self.set_quantum_shared_key(qSharedKey)
-            print(f"Classical Key Size: {len(cSerializedKey)}\nQuantum Key Size: {len(qSharedKey)}\nSent Package Size: {len(cSerializedKey+qSharedKey)}")
             self.socket.send(cSerializedKey+qSharedKey)#Server responds to the client with its own public key
         except Exception as e:
             print(f"Error: {e}")

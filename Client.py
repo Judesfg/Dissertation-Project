@@ -44,7 +44,6 @@ class Client(Node):
             serializedKey = self.socket.recv(size)#Recieves the server's public key
             quantumKey = serializedKey[(size-self.qSharedKeySize):]
             classicalKey = self.protocol.deserialize(serializedKey[:self.serializedCKeySize])
-            print(f"Quantum Key extracted, Size: {len(quantumKey)}\nQuantum Key: {quantumKey}\n\nClassical Key: {classicalKey}")
         except Exception as e:
             print(f"Error: {e}")
         finally:
