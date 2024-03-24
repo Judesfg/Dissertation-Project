@@ -36,7 +36,6 @@ class Server(Node):
             self.socket, bob_address = serverSocket.accept()#Once a client is detected, a new new instance of the socket class is created for it
             print("Connection accepted...")
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the client socket to use the same port more than once
-            print("Recieving key...")
             serializedKey = self.socket.recv(self.serializedCKeySize)#Recieves the public key from the client
             size = len(serializedKey)
             print("Key recieved.")
@@ -80,7 +79,3 @@ class Server(Node):
             client_socket.close()#Closes connection to the client
             print("Connection with client terminated")
             server.close()#Shuts down the server
-        
-
-
-#self.public_key_as = self.private_key_as.public_key().public_bytes(serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo)

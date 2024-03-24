@@ -108,7 +108,6 @@ class Node():
         self.set_classical_asymmetric_keys(privateKey, publicKey)#Sets the classical public and private keys as instance variables
         print("Classical key pair successfully generated.")
         publicKey, privateKey = generate_keypair()#Generates a quantum key pair using Kyber1024
-        print(f"Original Kyber key length: {len(publicKey)}")
         self.set_quantum_asymmetric_keys(privateKey, publicKey)#Sets the quantum public and private keys as instance variablers
         print("Quantum key pair successfully generated.")
 

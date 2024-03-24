@@ -21,7 +21,6 @@ class Client(Node):
         """Creates an instance of the Client class, inheriting from the Node superclass."""
         super().__init__()
         self.nodeType = 'CLIENT' #Create an ENUM for this
-        print("Serializing public key")
         self.send_key()
         self.generate_symmetric_key()
         self.run_client()
