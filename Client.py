@@ -34,14 +34,16 @@ class Client(Node):
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#Creates a new instance of the socket class
             self.socket.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the socket to use the same port more than once
             self.socket.connect((self.ip, self.handshakePort))#Binds the socket to the given ip address and port
-            cSerializedKey = self.protocol.serialize(self.get_classical_public_key())#Serializes classical public key
-            keys = cSerializedKey
+            cKey = self.protocol.serialize(self.get_classical_public_key())#Serializes classical public key
+            qKey = self.get_quantum_public_key()
+            keys = cKey + qKey
             size = len(keys)
             print("Sending key")
             self.socket.send(keys)#Sends the serialized public keys
-            size += self.qSharedKeySize
+            #size = len(cKey) 
             serializedKey = self.socket.recv(size)#Recieves the server's public key
-            quantumKey = serializedKey[(size-self.qSharedKeySize):]
+            encryptedQuantumKey = serializedKey[(size-self.qPublicKeySize):]
+            quantumKey = decrypt(self.get_quantum_private_key(), encryptedQuantumKey)
             classicalKey = self.protocol.deserialize(serializedKey[:self.serializedCKeySize])
         except Exception as e:
             print(f"Error: {e}")

@@ -36,14 +36,16 @@ class Server(Node):
             self.socket, bob_address = serverSocket.accept()#Once a client is detected, a new new instance of the socket class is created for it
             print("Connection accepted...")
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the client socket to use the same port more than once
-            serializedKey = self.socket.recv(self.serializedCKeySize)#Recieves the public key from the client
+            serializedKey = self.socket.recv(self.serializedCKeySize+self.qPublicKeySize)#Recieves the public key from the client
             size = len(serializedKey)
+            quantumKey = serializedKey[(size-self.qPublicKeySize):]
+            classicalKey = self.protocol.deserialize(serializedKey[:self.serializedCKeySize])
+            print(f"Lengths:\n    Quantum: {len(quantumKey)}\n    Classical: {size-len(quantumKey)}\n    Total: {size}")
             print("Key recieved.")
-            classicalKey = self.protocol.deserialize(serializedKey)
             cSerializedKey = self.protocol.serialize(self.get_classical_public_key())#Serializes classical public key
-            encryptedKey, qSharedKey = encrypt(self.get_quantum_public_key())
-            self.set_quantum_shared_key(qSharedKey)
-            self.socket.send(cSerializedKey+qSharedKey)#Server responds to the client with its own public key
+            encryptedQuantumKey, qSharedKey = encrypt(quantumKey)
+            print(f"IMPORTANT: Encrypted key size: {len(encryptedQuantumKey)}")
+            self.socket.send(cSerializedKey+encryptedQuantumKey)#Server responds to the client with its own public key
         except Exception as e:
             print(f"Error: {e}")
             key = None
@@ -51,6 +53,7 @@ class Server(Node):
             serverSocket.close()#Closes connection
             self.socket.close()#Closes connection
             self.set_classical_peer_public_key(classicalKey)#Sets classical peer public key as an instance variable
+            self.set_quantum_shared_key(qSharedKey)#Sets the shared quantum key as an instance variable
 
     def run_server(self):
         """Runs on a loop once the initial handshake has been performed. At this point
