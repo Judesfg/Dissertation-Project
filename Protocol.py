@@ -85,25 +85,13 @@ class Protocol():
         certificate = h.finalize()#Creates the final MAC using the HMAC object
         print(f"Size of certificate: {len(certificate)}")
         return certificate#Returns the certificate of the plaintext
-    
-    def remove_mac(self, mac_message, mac_length, key):
-        message = mac_message[:len(mac_message)-mac_length]
-        certificate = mac_message[len(mac_message)-mac_length:]
-        verified = self.verify_mac(key, message, certificate)
-        if verified == True:
-            return message
-        else:
-            return "Invalid certificate"
 
     def verify_mac(self, key, message, certificate):
         try:
             print(f"Certificate: {certificate}")
             h = hmac.HMAC(key, hashes.SHA256())#Creates an HMAC object using the established hybrid key and SHA256
             h.update(message)#Updates the HMAC object with the message
-            h_copy = h.copy()
-            h.verify(certificate)
-            #certificate_copy = h_copy.finalize()
-            h_copy.verify(certificate)
+            h.verify(certificate)#Verifies the passed certificate with the HMAC object
             return True
         except Exception as e:
             print(f"Error: {e}")
