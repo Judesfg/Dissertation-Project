@@ -14,7 +14,12 @@ from Protocol import *
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from pqcrypto.pqcrypto.kem.kyber1024 import generate_keypair, encrypt, decrypt
+from pqcrypto.pqcrypto.kem.kyber1024 import generate_keypair as kyber_keypair
+from pqcrypto.pqcrypto.kem.kyber1024 import  encrypt as kyber_encap
+from pqcrypto.pqcrypto.kem.kyber1024 import  decrypt as kyber_decap
+from pqcrypto.pqcrypto.kem.mceliece8192128 import generate_keypair as mceliece_keypair
+from pqcrypto.pqcrypto.kem.mceliece8192128 import  encrypt as mceliece_encap
+from pqcrypto.pqcrypto.kem.mceliece8192128 import  decrypt as mceliece_decap
 
 class Node():
     def __init__(self) -> None:
@@ -107,7 +112,7 @@ class Node():
         publicKey = privateKey.public_key()#Derives the corresponding public key
         self.set_classical_asymmetric_keys(privateKey, publicKey)#Sets the classical public and private keys as instance variables
         print("Classical key pair successfully generated.")
-        publicKey, privateKey = generate_keypair()#Generates a quantum key pair using Kyber1024
+        publicKey, privateKey = kyber_keypair()#Generates a quantum key pair using Kyber1024
         self.set_quantum_asymmetric_keys(privateKey, publicKey)#Sets the quantum public and private keys as instance variablers
         print("Quantum key pair successfully generated.")
 

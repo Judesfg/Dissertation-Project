@@ -43,7 +43,7 @@ class Client(Node):
             #size = len(cKey) 
             serializedKey = self.socket.recv(size)#Recieves the server's public key
             encryptedQuantumKey = serializedKey[(size-self.qPublicKeySize):]
-            quantumKey = decrypt(self.get_quantum_private_key(), encryptedQuantumKey)
+            quantumKey = kyber_decap(self.get_quantum_private_key(), encryptedQuantumKey)
             classicalKey = self.protocol.deserialize(serializedKey[:self.serializedCKeySize])
         except Exception as e:
             print(f"Error: {e}")

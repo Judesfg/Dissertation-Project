@@ -43,7 +43,7 @@ class Server(Node):
             print(f"Lengths:\n    Quantum: {len(quantumKey)}\n    Classical: {size-len(quantumKey)}\n    Total: {size}")
             print("Key recieved.")
             cSerializedKey = self.protocol.serialize(self.get_classical_public_key())#Serializes classical public key
-            encryptedQuantumKey, qSharedKey = encrypt(quantumKey)
+            encryptedQuantumKey, qSharedKey = kyber_encap(quantumKey)
             print(f"IMPORTANT: Encrypted key size: {len(encryptedQuantumKey)}")
             self.socket.send(cSerializedKey+encryptedQuantumKey)#Server responds to the client with its own public key
         except Exception as e:
