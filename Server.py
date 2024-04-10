@@ -14,12 +14,16 @@ Date Created: 13/02/2024
 
 import socket
 from Node import *
+from SignatureKeys import *
 
 class Server(Node):
     def __init__(self) -> None:
         """Creates an instance of the Server class, inheriting from the Node superclass"""
         super().__init__()
         self.nodeType = 'SERVER' #Create an ENUM for this
+        self.generate_asymmetric_keys()
+        signatureKeys = SignatureKeys()
+        self.set_quantum_asymmetric_signature_keys(signatureKeys.serverPrivateDilithiumKey, signatureKeys.serverPublicDilithiumKey)
         self.listen_for_key()
         self.generate_symmetric_key()
         self.run_server()
@@ -42,7 +46,7 @@ class Server(Node):
             classicalKey = self.protocol.deserialize(serializedKey[:self.serializedCKeySize])
             print(f"Lengths:\n    Quantum: {len(quantumKey)}\n    Classical: {size-len(quantumKey)}\n    Total: {size}")
             print("Key recieved.")
-            cSerializedKey = self.protocol.serialize(self.get_classical_public_key())#Serializes classical public key
+            cSerializedKey = self.protocol.serialize(self.get_classical_public_encryption_key())#Serializes classical public key
             encryptedQuantumKey, qSharedKey = kyber_encap(quantumKey)
             print(f"IMPORTANT: Encrypted key size: {len(encryptedQuantumKey)}")
             self.socket.send(cSerializedKey+encryptedQuantumKey)#Server responds to the client with its own public key

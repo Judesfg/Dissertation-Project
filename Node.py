@@ -37,21 +37,26 @@ class Node():
         self.serializedCKeySize = 215
         self.qPublicKeySize = 1568
         self.qSharedKeySize = 32
-        self.generate_asymmetric_keys()
+        self.dilithiumSignatureSize = 3366
 
     def set_symmetric_key(self, key):
         """Setter method for symmetricKey."""
         self.symmetricKey = key
 
-    def set_classical_asymmetric_keys(self, sk, pk):
-        """Setter method for cPrivateKey and cPublicKey."""
-        self.cPrivateKey = sk
-        self.cPublicKey = pk
+    def set_classical_asymmetric_encryption_keys(self, sk, pk):
+        """Setter method for cPrivateEncryptionKey and cPublicEncryptionKey."""
+        self.cPrivateEncryptionKey = sk
+        self.cPublicEncryptionKey = pk
 
-    def set_quantum_asymmetric_keys(self, sk, pk):
-        """Setter method for qPrivateKey and qPublicKey"""
-        self.qPrivateKey = sk
-        self.qPublicKey = pk
+    def set_quantum_asymmetric_encryption_keys(self, sk, pk):
+        """Setter method for qPrivateEncryptionKey and qPublicEncryptionKey"""
+        self.qPrivateEncryptionKey = sk
+        self.qPublicEncryptionKey = pk
+
+    def set_quantum_asymmetric_signature_keys(self, sk, pk):
+        """Setter method for qPrivateSignatureKey and qPublicSignatureKey"""
+        self.qPrivateSignatureKey = sk
+        self.qPublicSignatureKey = pk
 
     def set_classical_peer_public_key(self, key):
         """Setter method for cPeerPublicKey."""
@@ -69,21 +74,29 @@ class Node():
         """Returns the variable symmetricKey."""
         return self.symmetricKey
 
-    def get_classical_private_key(self):
+    def get_classical_private_encryption_key(self):
         """Returns the variable cPrivateKey."""
-        return self.cPrivateKey
+        return self.cPrivateEncryptionKey
     
-    def get_quantum_private_key(self):
+    def get_quantum_private_encryption_key(self):
         """Returns the variable qPrivateKey."""
-        return self.qPrivateKey
+        return self.qPrivateEncryptionKey
     
-    def get_classical_public_key(self):
+    def get_classical_public_encryption_key(self):
         """Returns the variable cPublicKey."""
-        return self.cPublicKey
+        return self.cPublicEncryptionKey
     
-    def get_quantum_public_key(self):
+    def get_quantum_public_encryption_key(self):
         """Returns the variable qPublicKey."""
-        return self.qPublicKey
+        return self.qPublicEncryptionKey
+    
+    def get_quantum_private_signature_key(self):
+        """Returns the variable qPrivateSignatureKey"""
+        return self.qPrivateSignatureKey
+    
+    def get_quantum_public_signature_key(self):
+        """Returns the variable qPublicSignatureKey"""
+        return self.qPublicSignatureKey
     
     def get_classical_peer_public_key(self):
         """Returns the variable cPeerPublicKey."""
@@ -111,13 +124,29 @@ class Node():
     def generate_asymmetric_keys(self):
         """Randomly generates a private key using diffie-hellman and derives its 
         corresponding public key."""
-        privateKey = ec.generate_private_key(ec.SECP384R1())#Uses ECDH to generate a private key 384 bytes in size
-        publicKey = privateKey.public_key()#Derives the corresponding public key
-        self.set_classical_asymmetric_keys(privateKey, publicKey)#Sets the classical public and private keys as instance variables
+        privateDHKey = ec.generate_private_key(ec.SECP384R1())#Uses ECDH to generate a private key 384 bytes in size
+        publicDHKey = privateDHKey.public_key()#Derives the corresponding public key
+        self.set_classical_asymmetric_encryption_keys(privateDHKey, publicDHKey)#Sets the classical public and private keys as instance variables
         print("Classical key pair successfully generated.")
-        publicKey, privateKey = kyber_keypair()#Generates a quantum key pair using Kyber1024
-        self.set_quantum_asymmetric_keys(privateKey, publicKey)#Sets the quantum public and private keys as instance variablers
+        publicKyKey, privateKyKey = kyber_keypair()#Generates a quantum key pair using Kyber1024
+        self.set_quantum_asymmetric_encryption_keys(privateKyKey, publicKyKey)#Sets the quantum public and private keys used for enryption as instance variables
+        #self.setSignatureKeys()
         print("Quantum key pair successfully generated.")
+
+    def setSignatureKeys(self):
+        publicDiKey, privateDiKey = dilithium_keypair()
+        print(f"Original Dilithium Public Key Length: {len(publicDiKey)}")
+        print(f"Original Dilithium Private Key Length: {len(privateDiKey)}")
+        if self.nodeType == 'SERVER':
+            fPublic = open("serverPublicDilithiumKey.txt","w")
+            fPrivate = open("serverPrivateDilithiumKey.txt","w")
+        elif self.nodeType == 'CLIENT':
+            fPublic = open("clientPublicDilithiumKey.txt","w")
+            fPrivate = open("clientPrivateDilithiumKey.txt","w")
+        fPublic.write(str(publicDiKey))
+        fPrivate.write(str(privateDiKey))
+        fPublic.close()
+        fPrivate.close()
 
     def recvall(self, size):
         result = b''
