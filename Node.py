@@ -20,6 +20,9 @@ from pqcrypto.pqcrypto.kem.kyber1024 import  decrypt as kyber_decap
 from pqcrypto.pqcrypto.kem.mceliece8192128 import generate_keypair as mceliece_keypair
 from pqcrypto.pqcrypto.kem.mceliece8192128 import  encrypt as mceliece_encap
 from pqcrypto.pqcrypto.kem.mceliece8192128 import  decrypt as mceliece_decap
+from pqcrypto.pqcrypto.sign.dilithium4 import generate_keypair as dilithium_keypair
+from pqcrypto.pqcrypto.sign.dilithium4 import sign as dilithium_sign
+from pqcrypto.pqcrypto.sign.dilithium4 import verify as dilithium_verify
 
 class Node():
     def __init__(self) -> None:
