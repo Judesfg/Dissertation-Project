@@ -25,6 +25,7 @@ class Client(Node):
         self.generate_asymmetric_keys()
         signatureKeys = SignatureKeys()
         self.set_quantum_asymmetric_signature_keys(signatureKeys.clientPrivateDilithiumKey, signatureKeys.clientPublicDilithiumKey)
+        self.set_peer_public_signature_key(signatureKeys.serverPublicDilithiumKey)
         print(f"\nDilithium Private Key Length: {len(self.get_quantum_private_signature_key())}\nDilithium Public Key Length: {len(self.get_quantum_public_signature_key())}")
         self.send_key()
         self.generate_symmetric_key()
@@ -44,14 +45,18 @@ class Client(Node):
         keys = cKey + qKey
         signature = dilithium_sign(self.get_quantum_private_signature_key(), keys)
         keys += signature
-        print(f"\nCOPY THIS:\nSignature size: {len(signature)}\n")
+        sigLength = self.dilithiumSignatureSize
         print("Sending key")
         size = len(keys)
         self.socket.send(keys)#Sends the serialized public keys
         serializedKey = self.socket.recv(size)#Recieves the server's public key
-        encryptedQuantumKey = serializedKey[(size-self.qPublicKeySize):]
+        peerSignature = serializedKey[(size-sigLength):]
+        keyPackage = serializedKey[:(size-sigLength)]
+        assert dilithium_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+        print("Digital signature valid!")
+        encryptedQuantumKey = keyPackage[self.serializedCKeySize:]
         quantumKey = kyber_decap(self.get_quantum_private_encryption_key(), encryptedQuantumKey)
-        classicalKey = self.protocol.deserialize(serializedKey[:self.serializedCKeySize])
+        classicalKey = self.protocol.deserialize(keyPackage[:self.serializedCKeySize])
         #except Exception as e:
         #    print(f"Error: {e}")
         #finally:

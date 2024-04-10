@@ -66,6 +66,10 @@ class Node():
         """Setter method for cPeerPublicKey."""
         self.qPeerPublicKey = key
 
+    def set_peer_public_signature_key(self, key):
+        """Setter method for peerPublicSignatureKey"""
+        self.peerpublicSignatureKey = key
+
     def set_quantum_shared_key(self, key):
         """Setter method for qSharedKey."""
         self.qSharedKey = key
@@ -106,6 +110,10 @@ class Node():
         """Returns the variable qPeerPublicKey."""
         return self.qPeerPublicKey
     
+    def get_peer_public_signature_key(self):
+        """Returns the variable peerPublicSignatureKey"""
+        return self.peerpublicSignatureKey
+    
     def get_quantum_shared_key(self):
         """Returns the variable qSharedKey."""
         return self.qSharedKey
@@ -114,7 +122,7 @@ class Node():
         """Derives a shared key with a peer, using the privateKey and publicKey instance 
         variables."""
         peer_public_key = self.get_classical_peer_public_key()
-        private_key = self.get_classical_private_key()
+        private_key = self.get_classical_private_encryption_key()
         cSharedKey = private_key.exchange(ec.ECDH(), peer_public_key)#Performs elliptic curve diffie-hellman (ECDH) using the peer public key and own private key
         qSharedKey = self.get_quantum_shared_key()
         derivedKey = HKDF(algorithm=hashes.SHA256(), length=32, salt=qSharedKey, info=b'handshake data').derive(cSharedKey)#Uses a key derivation function (HKDF) to generate the final shared key

@@ -24,6 +24,7 @@ class Server(Node):
         self.generate_asymmetric_keys()
         signatureKeys = SignatureKeys()
         self.set_quantum_asymmetric_signature_keys(signatureKeys.serverPrivateDilithiumKey, signatureKeys.serverPublicDilithiumKey)
+        self.set_peer_public_signature_key(signatureKeys.clientPublicDilithiumKey)
         self.listen_for_key()
         self.generate_symmetric_key()
         self.run_server()
@@ -31,33 +32,40 @@ class Server(Node):
     def listen_for_key(self):
         """Server side of the public key exchange. Recieves a key and saves it for later 
         use, before sending its own public key in response."""
-        try:
-            serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#Creates an instance of the socket class
-            serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the socket to use the same port more than once
-            serverSocket.bind((self.ip, self.handshakePort))#Binds the socket to the given ip address and port
-            serverSocket.listen(0)#Server listens for activity on this port. The parameter 0 means there can be no backlog queue
-            print(f"Listening for keys on {self.ip}:{self.handshakePort}.")
-            self.socket, bob_address = serverSocket.accept()#Once a client is detected, a new new instance of the socket class is created for it
-            print("Connection accepted...")
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the client socket to use the same port more than once
-            serializedKey = self.socket.recv(self.serializedCKeySize+self.qPublicKeySize)#Recieves the public key from the client
-            size = len(serializedKey)
-            quantumKey = serializedKey[(size-self.qPublicKeySize):]
-            classicalKey = self.protocol.deserialize(serializedKey[:self.serializedCKeySize])
-            print(f"Lengths:\n    Quantum: {len(quantumKey)}\n    Classical: {size-len(quantumKey)}\n    Total: {size}")
-            print("Key recieved.")
-            cSerializedKey = self.protocol.serialize(self.get_classical_public_encryption_key())#Serializes classical public key
-            encryptedQuantumKey, qSharedKey = kyber_encap(quantumKey)
-            print(f"IMPORTANT: Encrypted key size: {len(encryptedQuantumKey)}")
-            self.socket.send(cSerializedKey+encryptedQuantumKey)#Server responds to the client with its own public key
-        except Exception as e:
-            print(f"Error: {e}")
-            key = None
-        finally:
-            serverSocket.close()#Closes connection
-            self.socket.close()#Closes connection
-            self.set_classical_peer_public_key(classicalKey)#Sets classical peer public key as an instance variable
-            self.set_quantum_shared_key(qSharedKey)#Sets the shared quantum key as an instance variable
+        #try:
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#Creates an instance of the socket class
+        serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the socket to use the same port more than once
+        serverSocket.bind((self.ip, self.handshakePort))#Binds the socket to the given ip address and port
+        serverSocket.listen(0)#Server listens for activity on this port. The parameter 0 means there can be no backlog queue
+        print(f"Listening for keys on {self.ip}:{self.handshakePort}.")
+        self.socket, bob_address = serverSocket.accept()#Once a client is detected, a new new instance of the socket class is created for it
+        print("Connection accepted...")
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the client socket to use the same port more than once
+        serializedKey = self.socket.recv(self.serializedCKeySize+self.qPublicKeySize+self.dilithiumSignatureSize)#Recieves the public key from the client
+        size = len(serializedKey)
+        peerSignature = serializedKey[(size-self.dilithiumSignatureSize):]
+        keyPackage = serializedKey[:(size-self.dilithiumSignatureSize)]
+        size = len(keyPackage)
+        assert dilithium_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+        print("Digital signature valid!")
+        quantumKey = keyPackage[(size-self.qPublicKeySize):]
+        classicalKey = self.protocol.deserialize(keyPackage[:self.serializedCKeySize])
+        print(f"Lengths:\n    Quantum: {len(quantumKey)}\n    Classical: {size-len(quantumKey)}\n    Total: {size}")
+        print("Key recieved.")
+        cSerializedKey = self.protocol.serialize(self.get_classical_public_encryption_key())#Serializes classical public key
+        encryptedQuantumKey, qSharedKey = kyber_encap(quantumKey)
+        keys = cSerializedKey+encryptedQuantumKey
+        signature = dilithium_sign(self.get_quantum_private_signature_key(), keys)
+        keys += signature
+        self.socket.send(keys)#Server responds to the client with its own public key
+        #except Exception as e:
+        #    print(f"Error: {e}")
+        #    key = None
+        #finally:
+        serverSocket.close()#Closes connection
+        self.socket.close()#Closes connection
+        self.set_classical_peer_public_key(classicalKey)#Sets classical peer public key as an instance variable
+        self.set_quantum_shared_key(qSharedKey)#Sets the shared quantum key as an instance variable
 
     def run_server(self):
         """Runs on a loop once the initial handshake has been performed. At this point
