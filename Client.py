@@ -26,7 +26,6 @@ class Client(Node):
         signatureKeys = SignatureKeys()
         self.set_quantum_asymmetric_signature_keys(signatureKeys.clientPrivateDilithiumKey, signatureKeys.clientPublicDilithiumKey)
         self.set_peer_public_signature_key(signatureKeys.serverPublicDilithiumKey)
-        print(f"\nDilithium Private Key Length: {len(self.get_quantum_private_signature_key())}\nDilithium Public Key Length: {len(self.get_quantum_public_signature_key())}")
         self.send_key()
         self.generate_symmetric_key()
         self.run_client()
@@ -81,6 +80,6 @@ class Client(Node):
             print(f"Error: {e}")
         finally:
             client.close()#Close connection to server
-            print("Connection to server terminated")
+            print("Connection to server terminated\n\n")
 
 client = Client()

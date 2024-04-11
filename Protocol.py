@@ -38,8 +38,7 @@ class Protocol():
         print(f"\n\nBeginning Encryption...\n\nPassed plaintext: {plaintext}")
         padder = padding.PKCS7(128).padder()#Creates a padder object
         paddedData = padder.update(plaintext.encode("utf-8")) + padder.finalize()#Pads the data to be used with a 128bit block cipher
-        print(f"Padded Message Size: {sys.getsizeof(paddedData)} bytes")
-        certificate = self.generate_mac(paddedData, key)
+        certificate = self.generate_mac(paddedData, key)#Generates a MAC from the padded plaintext
         iv = os.urandom(16)#Generates a random 16 byte initialisation vector
         cipher = Cipher(algorithms.AES(key), modes.CBC(iv))#Creates a cipher using the advanced encryption scheme (AES) with cipher block chaining (CBC)
         encryptor = cipher.encryptor()#Creates an encryptor using the cipher
@@ -47,7 +46,7 @@ class Protocol():
         print(f"Base ciphertext: {encrypted}")
         encrypted += iv#Appends the initialisation vector to the encrypted message
         encrypted += certificate
-        print(f"Ciphertext Size: {sys.getsizeof(encrypted)} bytes\nInitial Vector: {iv}\nCertificate: {certificate}\nActual Ciphertext: {encrypted}")
+        print(f"Initial Vector: {iv}\nCertificate: {certificate}\nActual Ciphertext: {encrypted}")
         return encrypted#Returns the encrypted message
 
     def decrypt(self, ciphertext, key):
@@ -61,7 +60,6 @@ class Protocol():
         iv = ciphertext[-48:-32]#Slices the ciphertext to retrieve the initialisation vector
         print(f"\n\nBeginning Decryption...\n\nPassed ciphertext: {ciphertext}")
         messageSize = len(ciphertext)-48#Determines the size of the encrypted message without the IV and MAC
-        print(f"Messsage Size: {messageSize} bytes")
         ciphertext = ciphertext[0:messageSize]#Slices the ciphertext to retrieve just the encrypted message
         print(f"Actual Ciphertext: {ciphertext}") 
         print(f"Initial Vector: {iv}")
@@ -83,7 +81,6 @@ class Protocol():
         h = hmac.HMAC(key, hashes.SHA256())#Creates an HMAC object using the established hybrid key and SHA256
         h.update(message)#Updates the HMAC object with the message
         certificate = h.finalize()#Creates the final MAC using the HMAC object
-        print(f"Size of certificate: {len(certificate)}")
         return certificate#Returns the certificate of the plaintext
 
     def verify_mac(self, key, message, certificate):

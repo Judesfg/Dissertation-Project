@@ -143,8 +143,6 @@ class Node():
 
     def setSignatureKeys(self):
         publicDiKey, privateDiKey = dilithium_keypair()
-        print(f"Original Dilithium Public Key Length: {len(publicDiKey)}")
-        print(f"Original Dilithium Private Key Length: {len(privateDiKey)}")
         if self.nodeType == 'SERVER':
             fPublic = open("serverPublicDilithiumKey.txt","w")
             fPrivate = open("serverPrivateDilithiumKey.txt","w")

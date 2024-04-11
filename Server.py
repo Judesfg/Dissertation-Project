@@ -50,7 +50,6 @@ class Server(Node):
             print("Digital signature valid!")
             quantumKey = keyPackage[(size-self.qPublicKeySize):]
             classicalKey = self.protocol.deserialize(keyPackage[:self.serializedCKeySize])
-            print(f"Lengths:\n    Quantum: {len(quantumKey)}\n    Classical: {size-len(quantumKey)}\n    Total: {size}")
             print("Key recieved.")
             cSerializedKey = self.protocol.serialize(self.get_classical_public_encryption_key())#Serializes classical public key
             encryptedQuantumKey, qSharedKey = kyber_encap(quantumKey)
@@ -92,5 +91,5 @@ class Server(Node):
             print(f"Error: {e}")
         finally:
             client_socket.close()#Closes connection to the client
-            print("Connection with client terminated")
+            print("Connection with client terminated\n\n")
             server.close()#Shuts down the server
