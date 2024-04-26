@@ -13,7 +13,10 @@ Date Created: 15/02/2024
 """
 
 import sys
+import tracemalloc
+import linecache
 import os
+import time
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import hashes, hmac
 from cryptography.hazmat.primitives import serialization
@@ -101,6 +104,19 @@ class Protocol():
             format=serialization.PublicFormat.SubjectPublicKeyInfo
             )
     
+    def serialize_private(self, x):
+        """Given some input, returns a serialized version using PEM."""
+        return x.private_bytes(
+            encoding=serialization.Encoding.PEM, 
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+            )
+    
     def deserialize(self, x):
         """Given some PEM serialized input, returns a deserialized version."""
         return serialization.load_pem_public_key(x, default_backend())
+    
+    def deserialize_private(self, x):
+        """Given some PEM serialized input, returns a deserialized version."""
+        return serialization.load_pem_private_key(x, None, default_backend())
+    

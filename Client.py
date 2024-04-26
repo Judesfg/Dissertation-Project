@@ -12,20 +12,32 @@ Date Created: 13/02/2024
 ////////////////////////////////////////////////////////////////////////////////////////
 """
 
+import tracemalloc
+import linecache
+import os
 import socket
 from Node import *
 from SignatureKeys import *
 from Protocol import *
 
 class Client(Node):
-    def __init__(self) -> None:
+    def __init__(self, encType, sigType) -> None:
         """Creates an instance of the Client class, inheriting from the Node superclass."""
-        super().__init__()
+        super().__init__(encType, sigType)
+        self.start_of_runtime = time.time()
         self.nodeType = 'CLIENT' #Create an ENUM for this
         self.generate_asymmetric_keys()
         signatureKeys = SignatureKeys()
-        self.set_quantum_asymmetric_signature_keys(signatureKeys.clientPrivateDilithiumKey, signatureKeys.clientPublicDilithiumKey)
-        self.set_peer_public_signature_key(signatureKeys.serverPublicDilithiumKey)
+        if self.signatureType == 'DILITHIUM':
+            self.set_asymmetric_signature_keys(signatureKeys.clientPrivateDilithiumKey, signatureKeys.clientPublicDilithiumKey)
+            self.set_peer_public_signature_key(signatureKeys.serverPublicDilithiumKey)
+        elif self.signatureType == 'SPHINCS':
+            self.set_asymmetric_signature_keys(signatureKeys.clientPrivateSphincsKey, signatureKeys.clientPublicSphincsKey)
+            self.set_peer_public_signature_key(signatureKeys.serverPublicSphincsKey)
+        elif self.signatureType == 'ECDSA':
+            self.set_asymmetric_signature_keys(self.protocol.deserialize_private(signatureKeys.clientPrivateECDSAKey), 
+                                               self.protocol.deserialize(signatureKeys.clientPublicECDSAKey))
+            self.set_peer_public_signature_key(self.protocol.deserialize(signatureKeys.serverPublicECDSAKey))
         self.send_key()
         self.generate_symmetric_key()
         self.run_client()
@@ -42,19 +54,43 @@ class Client(Node):
             cKey = self.protocol.serialize(self.get_classical_public_encryption_key())#Serializes classical public key
             qKey = self.get_quantum_public_encryption_key()
             keys = cKey + qKey
-            signature = dilithium_sign(self.get_quantum_private_signature_key(), keys)
+
+            #Sign the key package
+            tracemalloc.start()
+            if self.signatureType == 'DILITHIUM':
+                signature = dilithium_sign(self.get_private_signature_key(), keys)
+            elif self.signatureType == 'SPHINCS':
+                signature = sphincs_sign(self.get_private_signature_key(), keys)
+            elif self.signatureType == 'ECDSA':
+                signature = self.get_private_signature_key().sign(keys, ec.ECDSA(hashes.SHA256()))
             keys += signature
-            sigLength = self.dilithiumSignatureSize
+
             print("Sending key")
             size = len(keys)
+            print(size)
             self.socket.send(keys)#Sends the serialized public keys
-            serializedKey = self.socket.recv(size)#Recieves the server's public key
-            peerSignature = serializedKey[(size-sigLength):]
-            keyPackage = serializedKey[:(size-sigLength)]
-            assert dilithium_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+            print("Key sent")
+
+            packageSize = self.serializedCKeySize+self.qEncapKeySize+self.signatureSize
+            serializedKey = self.recvall(packageSize)#Recieves the server's public key package
+            print("Key successfully recieved")
+            peerSignature = serializedKey[(packageSize-self.signatureSize):]
+            keyPackage = serializedKey[:(packageSize-self.signatureSize)]
+
+            if self.signatureType == 'DILITHIUM':
+                assert dilithium_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+            elif self.signatureType == 'SPHINCS':
+                assert sphincs_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+            elif self.signatureType == 'ECDSA':
+                self.get_peer_public_signature_key().verify(signature, keyPackage, ec.ECDSA(hashes.SHA256()))
+            keys += signature
             print("Digital signature valid!")
+
             encryptedQuantumKey = keyPackage[self.serializedCKeySize:]
-            quantumKey = kyber_decap(self.get_quantum_private_encryption_key(), encryptedQuantumKey)
+            if self.encryptionKeyType == 'KYBER':
+                quantumKey = kyber_decap(self.get_quantum_private_encryption_key(), encryptedQuantumKey)
+            elif self.encryptionKeyType == 'MCELIECE':
+                quantumKey = mceliece_decap(self.get_quantum_private_encryption_key(), encryptedQuantumKey)
             classicalKey = self.protocol.deserialize(keyPackage[:self.serializedCKeySize])
         except Exception as e:
             print(f"Error: {e}")
@@ -67,6 +103,11 @@ class Client(Node):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#Creates a new instance of the socket class
         client.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the socket to use the same port more than once
         client.connect((self.ip, self.port))#Binds the socket to the given ip address and port
+        timeTaken = time.time() - self.start_of_runtime
+        file = open("handshake-time.txt","a")
+        file.write(f"\nE: {self.encryptionKeyType}, S: {self.signatureType} :: {timeTaken}")
+        file.close()
+        print("Total runtime: %s seconds" % (time.time() - self.start_of_runtime))
         try:
             while True:
                 message = input("Enter message: ")#Asks the user to enter a message
@@ -82,4 +123,4 @@ class Client(Node):
             client.close()#Close connection to server
             print("Connection to server terminated\n\n")
 
-client = Client()
+client = Client('KYBER', 'DILITHIUM')

@@ -17,14 +17,22 @@ from Node import *
 from SignatureKeys import *
 
 class Server(Node):
-    def __init__(self) -> None:
+    def __init__(self, encType, sigType) -> None:
         """Creates an instance of the Server class, inheriting from the Node superclass"""
-        super().__init__()
+        super().__init__(encType, sigType)
         self.nodeType = 'SERVER' #Create an ENUM for this
         self.generate_asymmetric_keys()
         signatureKeys = SignatureKeys()
-        self.set_quantum_asymmetric_signature_keys(signatureKeys.serverPrivateDilithiumKey, signatureKeys.serverPublicDilithiumKey)
-        self.set_peer_public_signature_key(signatureKeys.clientPublicDilithiumKey)
+        if self.signatureType == 'DILITHIUM':
+            self.set_asymmetric_signature_keys(signatureKeys.serverPrivateDilithiumKey, signatureKeys.serverPublicDilithiumKey)
+            self.set_peer_public_signature_key(signatureKeys.clientPublicDilithiumKey)
+        elif self.signatureType == 'SPHINCS':
+            self.set_asymmetric_signature_keys(signatureKeys.serverPrivateSphincsKey, signatureKeys.serverPublicSphincsKey)
+            self.set_peer_public_signature_key(signatureKeys.clientPublicSphincsKey)
+        elif self.signatureType == 'ECDSA':
+            self.set_asymmetric_signature_keys(self.protocol.deserialize_private(signatureKeys.serverPrivateECDSAKey), 
+                                               self.protocol.deserialize(signatureKeys.serverPublicECDSAKey))
+            self.set_peer_public_signature_key(self.protocol.deserialize(signatureKeys.clientPublicECDSAKey))
         self.listen_for_key()
         self.generate_symmetric_key()
         self.run_server()
@@ -41,21 +49,41 @@ class Server(Node):
             self.socket, bob_address = serverSocket.accept()#Once a client is detected, a new new instance of the socket class is created for it
             print("Connection accepted...")
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the client socket to use the same port more than once
-            serializedKey = self.socket.recv(self.serializedCKeySize+self.qPublicKeySize+self.dilithiumSignatureSize)#Recieves the public key from the client
+            packageSize = self.serializedCKeySize+self.qPublicKeySize+self.signatureSize
+            if self.signatureType == 'ECDSA':
+                serializedKey = self.socket.recv(packageSize)#Recieves the public key from the client
+            else:
+                serializedKey = self.recvall(packageSize)#Recieves the public key from the client
             size = len(serializedKey)
-            peerSignature = serializedKey[(size-self.dilithiumSignatureSize):]
-            keyPackage = serializedKey[:(size-self.dilithiumSignatureSize)]
+            peerSignature = serializedKey[(size-self.signatureSize):]
+            keyPackage = serializedKey[:(size-self.signatureSize)]
             size = len(keyPackage)
-            assert dilithium_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+            if self.signatureType == 'DILITHIUM':
+                assert dilithium_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+            elif self.signatureType == 'SPHINCS':
+                assert sphincs_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+            elif self.signatureType == 'ECDSA':
+                self.get_peer_public_signature_key().verify(peerSignature, keyPackage, ec.ECDSA(hashes.SHA256()))
             print("Digital signature valid!")
             quantumKey = keyPackage[(size-self.qPublicKeySize):]
             classicalKey = self.protocol.deserialize(keyPackage[:self.serializedCKeySize])
             print("Key recieved.")
             cSerializedKey = self.protocol.serialize(self.get_classical_public_encryption_key())#Serializes classical public key
-            encryptedQuantumKey, qSharedKey = kyber_encap(quantumKey)
+            if self.encryptionKeyType == 'KYBER':
+                encryptedQuantumKey, qSharedKey = kyber_encap(quantumKey)
+                print(f"ENCRYPTED KYBER SIZE: {len(encryptedQuantumKey)}")
+            elif self.encryptionKeyType == 'MCELIECE':
+                encryptedQuantumKey, qSharedKey = mceliece_encap(quantumKey)
+                print(f"ENCRYPTED MCELIECE SIZE: {len(encryptedQuantumKey)}")
             keys = cSerializedKey+encryptedQuantumKey
-            signature = dilithium_sign(self.get_quantum_private_signature_key(), keys)
+            if self.signatureType == 'DILITHIUM':
+                signature = dilithium_sign(self.get_private_signature_key(), keys)
+            elif self.signatureType == 'SPHINCS':
+                signature = sphincs_sign(self.get_private_signature_key(), keys)
+            elif self.signatureType == 'ECDSA':
+                signature = self.get_private_signature_key().sign(keys, ec.ECDSA(hashes.SHA256()))
             keys += signature
+            print(f"sent package size: {len(keys)}")
             self.socket.send(keys)#Server responds to the client with its own public key
         except Exception as e:
             print(f"Error: {e}")
@@ -93,3 +121,5 @@ class Server(Node):
             client_socket.close()#Closes connection to the client
             print("Connection with client terminated\n\n")
             server.close()#Shuts down the server
+
+server = Server('KYBER', 'DILITHIUM')

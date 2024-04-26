@@ -11,23 +11,32 @@ Date Created: 13/02/2024
 """
 
 from Protocol import *
+import tracemalloc
+import linecache
+import os
+import time
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from pqcrypto.pqcrypto.kem.kyber1024 import generate_keypair as kyber_keypair
 from pqcrypto.pqcrypto.kem.kyber1024 import  encrypt as kyber_encap
 from pqcrypto.pqcrypto.kem.kyber1024 import  decrypt as kyber_decap
-from pqcrypto.pqcrypto.kem.mceliece8192128 import generate_keypair as mceliece_keypair
-from pqcrypto.pqcrypto.kem.mceliece8192128 import  encrypt as mceliece_encap
-from pqcrypto.pqcrypto.kem.mceliece8192128 import  decrypt as mceliece_decap
+from pqcrypto.pqcrypto.kem.mceliece348864 import generate_keypair as mceliece_keypair
+from pqcrypto.pqcrypto.kem.mceliece348864 import  encrypt as mceliece_encap
+from pqcrypto.pqcrypto.kem.mceliece348864 import  decrypt as mceliece_decap
 from pqcrypto.pqcrypto.sign.dilithium4 import generate_keypair as dilithium_keypair
 from pqcrypto.pqcrypto.sign.dilithium4 import sign as dilithium_sign
 from pqcrypto.pqcrypto.sign.dilithium4 import verify as dilithium_verify
+from pqcrypto.pqcrypto.sign.sphincs_sha256_256f_robust import generate_keypair as sphincs_keypair
+from pqcrypto.pqcrypto.sign.sphincs_sha256_256f_robust import sign as sphincs_sign
+from pqcrypto.pqcrypto.sign.sphincs_sha256_256f_robust import verify as sphincs_verify
 
 class Node():
-    def __init__(self) -> None:
+    def __init__(self, encType, sigType) -> None:
         """Initialises an instance of the Node class."""
         self.protocol = Protocol()
+        self.encryptionKeyType = encType #KYBER or MCELIECE
+        self.signatureType = sigType #DILITHIUM or SPHINCS or ECDSA
         self.ip = "127.0.0.1"
         self.handshakePort = 8282
         self.port = 8000
@@ -35,9 +44,19 @@ class Node():
         self.peerPublicKey = None
         self.cPublicKeySize = 384
         self.serializedCKeySize = 215
-        self.qPublicKeySize = 1568
+        if self.encryptionKeyType == 'KYBER':
+            self.qPublicKeySize = 1568
+            self.qEncapKeySize = 1568
+        elif self.encryptionKeyType == 'MCELIECE':
+            self.qPublicKeySize = 261120
+            self.qEncapKeySize = 128
+        if self.signatureType == 'DILITHIUM':
+            self.signatureSize = 3366
+        elif self.signatureType == 'SPHINCS':
+            self.signatureSize = 49216
+        elif self.signatureType == 'ECDSA':
+            self.signatureSize = 104
         self.qSharedKeySize = 32
-        self.dilithiumSignatureSize = 3366
 
     def set_symmetric_key(self, key):
         """Setter method for symmetricKey."""
@@ -53,10 +72,10 @@ class Node():
         self.qPrivateEncryptionKey = sk
         self.qPublicEncryptionKey = pk
 
-    def set_quantum_asymmetric_signature_keys(self, sk, pk):
+    def set_asymmetric_signature_keys(self, sk, pk):
         """Setter method for qPrivateSignatureKey and qPublicSignatureKey"""
-        self.qPrivateSignatureKey = sk
-        self.qPublicSignatureKey = pk
+        self.privateSignatureKey = sk
+        self.publicSignatureKey = pk
 
     def set_classical_peer_public_key(self, key):
         """Setter method for cPeerPublicKey."""
@@ -94,13 +113,13 @@ class Node():
         """Returns the variable qPublicKey."""
         return self.qPublicEncryptionKey
     
-    def get_quantum_private_signature_key(self):
-        """Returns the variable qPrivateSignatureKey"""
-        return self.qPrivateSignatureKey
+    def get_private_signature_key(self):
+        """Returns the variable privateSignatureKey"""
+        return self.privateSignatureKey
     
-    def get_quantum_public_signature_key(self):
-        """Returns the variable qPublicSignatureKey"""
-        return self.qPublicSignatureKey
+    def get_public_signature_key(self):
+        """Returns the variable publicSignatureKey"""
+        return self.publicSignatureKey
     
     def get_classical_peer_public_key(self):
         """Returns the variable cPeerPublicKey."""
@@ -131,26 +150,49 @@ class Node():
 
     def generate_asymmetric_keys(self):
         """Randomly generates a private key using diffie-hellman and derives its 
-        corresponding public key."""
+        corresponding public key. Then generates a keypair using a quantum
+        primative."""
         privateDHKey = ec.generate_private_key(ec.SECP384R1())#Uses ECDH to generate a private key 384 bytes in size
         publicDHKey = privateDHKey.public_key()#Derives the corresponding public key
         self.set_classical_asymmetric_encryption_keys(privateDHKey, publicDHKey)#Sets the classical public and private keys as instance variables
         print("Classical key pair successfully generated.")
-        publicKyKey, privateKyKey = kyber_keypair()#Generates a quantum key pair using Kyber1024
-        self.set_quantum_asymmetric_encryption_keys(privateKyKey, publicKyKey)#Sets the quantum public and private keys used for enryption as instance variables
+        tracemalloc.start()
+        if self.encryptionKeyType == 'KYBER':
+            publicKey, privateKey = kyber_keypair()#Generates a quantum key pair using Kyber1024
+        elif self.encryptionKeyType == 'MCELIECE':
+            publicKey, privateKey = mceliece_keypair()#Generates a quantum key pair using McEliece348864
+        self.set_quantum_asymmetric_encryption_keys(privateKey, publicKey)#Sets the quantum public and private keys used for enryption as instance variables
         #self.setSignatureKeys()
         print("Quantum key pair successfully generated.")
 
     def setSignatureKeys(self):
-        publicDiKey, privateDiKey = dilithium_keypair()
-        if self.nodeType == 'SERVER':
-            fPublic = open("serverPublicDilithiumKey.txt","w")
-            fPrivate = open("serverPrivateDilithiumKey.txt","w")
-        elif self.nodeType == 'CLIENT':
-            fPublic = open("clientPublicDilithiumKey.txt","w")
-            fPrivate = open("clientPrivateDilithiumKey.txt","w")
-        fPublic.write(str(publicDiKey))
-        fPrivate.write(str(privateDiKey))
+        if self.signatureType == 'DILITHIUM':
+            publicKey, privateKey = dilithium_keypair()
+            if self.nodeType == 'SERVER':
+                fPublic = open("serverPublicDilithiumKey.txt","w")
+                fPrivate = open("serverPrivateDilithiumKey.txt","w")
+            elif self.nodeType == 'CLIENT':
+                fPublic = open("clientPublicDilithiumKey.txt","w")
+                fPrivate = open("clientPrivateDilithiumKey.txt","w")
+        elif self.signatureType == 'SPHINCS':
+            publicKey, privateKey = sphincs_keypair()
+            if self.nodeType == 'SERVER':
+                fPublic = open("serverPublicSphincsKey.txt","w")
+                fPrivate = open("serverPrivateSphincsKey.txt","w")
+            elif self.nodeType == 'CLIENT':
+                fPublic = open("clientPublicSphincsKey.txt","w")
+                fPrivate = open("clientPrivateSphincsKey.txt","w")
+        elif self.signatureType == 'ECDSA':
+            privateKey = ec.generate_private_key(ec.SECP384R1())
+            publicKey = privateKey.public_key()
+            if self.nodeType == 'SERVER':
+                fPublic = open("serverPublicECDSAKey.txt","w")
+                fPrivate = open("serverPrivateECDSAKey.txt","w")
+            elif self.nodeType == 'CLIENT':
+                fPublic = open("clientPublicECDSAKey.txt","w")
+                fPrivate = open("clientPrivateECDSAKey.txt","w")
+        fPublic.write(str(self.protocol.serialize(publicKey)))
+        fPrivate.write(str(self.protocol.serialize_private(privateKey)))
         fPublic.close()
         fPrivate.close()
 
@@ -162,3 +204,4 @@ class Node():
             result += data
             remaining -= len(data)
         return result
+    

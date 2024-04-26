@@ -1,0 +1,122 @@
+Total handshake runtimes:
+    Kyber-Dilithium:
+        1. 0.02833104133605957 seconds
+        2. 0.0250091552734375 seconds
+        3. 0.026582002639770508 seconds
+        4. 0.02731490135192871 seconds
+        5. 0.02568984031677246 seconds
+    Kyber-Sphincs
+        1. 0.5871169567108154 seconds
+        2. 0.5880510807037354 seconds
+        3. 0.587212085723877 seconds
+        4. 0.5892400741577148 seconds
+        5. 0.5891029834747314 seconds
+    McEliece-Dilithium
+        1. 0.10216593742370605 seconds
+        2. 0.0937199592590332 seconds
+        3. 0.08579373359680176 seconds
+        4. 0.09592795372009277 seconds
+        5. 0.15834903717041016 seconds
+    McEliece-Sphincs
+        1. 0.6788451671600342 seconds
+        2. 0.6848387718200684 seconds
+        3. 0.6701400279998779 seconds
+        4. 0.6507058143615723 seconds
+        5. 0.6505751609802246 seconds
+        6. 0.6620078086853027 seconds
+
+
+Encryption Algorithms:
+    Kyber keypair gen: 
+        1. 0.00009202957153320312 seconds
+        2. 0.00008416175842285156 seconds
+        3. 0.00008606910705566406 seconds
+        4. 0.00008392333984375 seconds
+        5. 0.00009703636169433594 seconds
+    Kyber KDF: 
+        1. 0.0006608963012695312 seconds
+        2. 0.00017309188842773438 seconds
+        3. 0.00017309188842773438 seconds
+        4. 0.00019311904907226562 seconds
+        5. 0.00018787384033203125 seconds
+    Kyber Encryption:
+        1. 0.002113819122314453 seconds
+        2. 0.0030388832092285156 seconds
+        3. 0.0030319690704345703 seconds
+        4. 0.0028228759765625 seconds
+        5. 0.002847909927368164 seconds
+    Kyber Decryption:
+        1. 0.0026988983154296875 seconds
+        2. 0.003036975860595703 seconds
+        3. 0.0030241012573242188 seconds
+        4. 0.0029671192169189453 seconds
+        5. 0.002524852752685547 seconds
+
+
+    McEliece keypair gen: 
+        1. 0.05763387680053711 seconds
+        2. 0.01175069808959961 seconds
+        3. 0.05866694450378418 seconds
+        4. 0.07379412651062012 seconds
+        5. 0.05554604530334473 seconds
+    McEliece KDF: 
+        1. 0.00018596649169921875 seconds
+        2. 0.0002739429473876953 seconds
+        3. 0.00018906593322753906 seconds
+        4. 0.00025773048400878906 seconds
+        5. 0.0002071857452392578 seconds
+    McEliece Encryption:
+        1. 0.0029020309448242188 seconds
+        2. 0.002964019775390625 seconds
+        3. 0.0049250125885009766 seconds
+        4. 0.002998828887939453 seconds
+        5. 0.003264904022216797 seconds
+    McEliece Decryption:
+        1. 0.0026819705963134766 seconds
+        2. 0.0028700828552246094 seconds
+        3. 0.0011949539184570312 seconds
+        4. 0.0031599998474121094 seconds
+        5. 0.003063201904296875 seconds
+
+
+
+Digital Signature Algorithms:
+    Dilithium keypair gen: 
+        1. 0.00011706352233886719 seconds
+        2. 0.00010919570922851562 seconds
+        3. 0.00010919570922851562 seconds
+        4. 0.00010514259338378906 seconds
+        5. 0.00011014938354492188 seconds
+    Dilithium signature gen: 
+        1. 0.0003371238708496094 seconds
+        2. 0.0003840923309326172 seconds
+        3. 0.00017595291137695312 seconds
+        4. 0.00047516822814941406 seconds
+        5. 0.0002911090850830078 seconds
+    Dilithium signature verify: 
+        1. 0.00011205673217773438 seconds
+        2. 0.00010418891906738281 seconds
+        3. 0.00010991096496582031 seconds
+        4. 0.00047516822814941406 seconds
+        5. 0.00011110305786132812 seconds
+
+
+    Sphincs keypair gen: 
+        1. 0.01149296760559082 seconds
+        2. 0.01175069808959961 seconds
+        3. 0.011815071105957031 seconds
+        4. 0.011924028396606445 seconds
+        5. 0.011840105056762695 seconds
+    Sphincs signature gen: 
+        1. 0.2688450813293457 seconds
+        2. 0.2690699100494385 seconds
+        3. 0.26849794387817383 seconds
+        4. 0.26924896240234375 seconds
+        5. 0.26848602294921875 seconds
+    Sphincs signature verify: 
+        1. 0.007356882095336914 seconds
+        2. 0.0073680877685546875 seconds
+        3. 0.007012844085693359 seconds
+        4. 0.007395744323730469 seconds
+        5. 0.0072629451751708984 seconds
+        6. 0.0002238750457763672 seconds

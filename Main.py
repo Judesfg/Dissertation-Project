@@ -12,5 +12,8 @@ Date Created: 13/02/2024
 """
 
 from Server import *
+from Client import *
 
-server = Server()
+for run in range(25):
+    Server('KYBER', 'ECDSA', run)
+
