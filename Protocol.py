@@ -39,6 +39,8 @@ class Protocol():
             -Encrypt the padded plaintex using the IV
             -Append the MAC"""
         print(f"\n\nBeginning Encryption...\n\nPassed plaintext: {plaintext}")
+        tracemalloc.start()
+        start_time = time.time()
         padder = padding.PKCS7(128).padder()#Creates a padder object
         paddedData = padder.update(plaintext.encode("utf-8")) + padder.finalize()#Pads the data to be used with a 128bit block cipher
         certificate = self.generate_mac(paddedData, key)#Generates a MAC from the padded plaintext
@@ -50,6 +52,12 @@ class Protocol():
         encrypted += iv#Appends the initialisation vector to the encrypted message
         encrypted += certificate
         print(f"Initial Vector: {iv}\nCertificate: {certificate}\nActual Ciphertext: {encrypted}")
+        print("Total encryption runtime: %s seconds" % (time.time() - start_time))
+        snapshot = tracemalloc.take_snapshot()
+        print("\n\nMemory data for encryption:")
+        self.display_memory(snapshot)
+        tracemalloc.stop()
+        print("\n\n")
         return encrypted#Returns the encrypted message
 
     def decrypt(self, ciphertext, key):
@@ -59,6 +67,8 @@ class Protocol():
             -Decrypt the ciphertext
             -Verify MAC
             -Strip padding"""
+        tracemalloc.start()
+        start_time = time.time()
         certificate = ciphertext[-32:]#Slices the ciphertext to retrieve the MAC
         iv = ciphertext[-48:-32]#Slices the ciphertext to retrieve the initialisation vector
         print(f"\n\nBeginning Decryption...\n\nPassed ciphertext: {ciphertext}")
@@ -76,6 +86,12 @@ class Protocol():
             plaintext = unpadder.update(paddedPlaintext) + unpadder.finalize()#Removes the padding from the message
             plaintext = plaintext.decode("utf-8")#Converts the message from a bytestring to a string
             print(f"Plaintext: {plaintext}")
+            print("Total decryption runtime: %s seconds" % (time.time() - start_time))
+            snapshot = tracemalloc.take_snapshot()
+            print("\n\nMemory data for decryption:")
+            self.display_memory(snapshot)
+            tracemalloc.stop()
+            print("\n\n")
             return plaintext#Returns the decrypted message
         else:
             return "ERROR: Invalid certificate was passed."
@@ -118,5 +134,32 @@ class Protocol():
     
     def deserialize_private(self, x):
         """Given some PEM serialized input, returns a deserialized version."""
-        return serialization.load_pem_private_key(x, None, default_backend())
+        return serialization.load_pem_private_key(x, default_backend())
     
+    def display_memory(self, snapshot, key_type='lineno', limit=5):
+        snapshot = tracemalloc.take_snapshot()
+        snapshot = snapshot.filter_traces((
+            tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+            tracemalloc.Filter(False, "<frozen importlib._bootstrap_external>"),
+            tracemalloc.Filter(False, "<frozen abc>"),
+            tracemalloc.Filter(False, "<unknown>"),
+        ))
+        top_stats = snapshot.statistics(key_type)
+
+        print("Top %s lines" % limit)
+        for index, stat in enumerate(top_stats[:limit], 1):
+            frame = stat.traceback[0]
+            # replace "/path/to/module/file.py" with "module/file.py"
+            filename = os.sep.join(frame.filename.split(os.sep)[-2:])
+            print("#%s: %s:%s: %.1f KiB"
+                % (index, filename, frame.lineno, stat.size / 1024))
+            line = linecache.getline(frame.filename, frame.lineno).strip()
+            if line:
+                print('    %s' % line)
+
+        other = top_stats[limit:]
+        if other:
+            size = sum(stat.size for stat in other)
+            print("%s other: %.1f KiB" % (len(other), size / 1024))
+        total = sum(stat.size for stat in top_stats)
+        print("Total allocated size: %.1f KiB" % (total / 1024))

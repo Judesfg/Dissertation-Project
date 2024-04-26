@@ -21,9 +21,9 @@ from SignatureKeys import *
 from Protocol import *
 
 class Client(Node):
-    def __init__(self, encType, sigType) -> None:
+    def __init__(self, encType, sigType, runNo) -> None:
         """Creates an instance of the Client class, inheriting from the Node superclass."""
-        super().__init__(encType, sigType)
+        super().__init__(encType, sigType, runNo)
         self.start_of_runtime = time.time()
         self.nodeType = 'CLIENT' #Create an ENUM for this
         self.generate_asymmetric_keys()
@@ -45,59 +45,100 @@ class Client(Node):
     def send_key(self):
         """Client side of the public key exchange. Sends a public key and then recieves the 
         public key from the server, saving it for later use."""
-        try:
-            """The following 3 lines could really do with being offloaded to their 
-            own function."""
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#Creates a new instance of the socket class
-            self.socket.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the socket to use the same port more than once
-            self.socket.connect((self.ip, self.handshakePort))#Binds the socket to the given ip address and port
-            cKey = self.protocol.serialize(self.get_classical_public_encryption_key())#Serializes classical public key
-            qKey = self.get_quantum_public_encryption_key()
-            keys = cKey + qKey
+        #try:
+        """The following 3 lines could really do with being offloaded to their 
+        own function."""
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#Creates a new instance of the socket class
+        self.socket.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the socket to use the same port more than once
+        self.socket.connect((self.ip, self.handshakePort))#Binds the socket to the given ip address and port
+        cKey = self.protocol.serialize(self.get_classical_public_encryption_key())#Serializes classical public key
+        qKey = self.get_quantum_public_encryption_key()
+        keys = cKey + qKey
 
-            #Sign the key package
-            tracemalloc.start()
-            if self.signatureType == 'DILITHIUM':
-                signature = dilithium_sign(self.get_private_signature_key(), keys)
-            elif self.signatureType == 'SPHINCS':
-                signature = sphincs_sign(self.get_private_signature_key(), keys)
-            elif self.signatureType == 'ECDSA':
-                signature = self.get_private_signature_key().sign(keys, ec.ECDSA(hashes.SHA256()))
-            keys += signature
+        #Sign the key package
+        tracemalloc.start()
+        if self.signatureType == 'DILITHIUM':
+            start_time = time.time()
+            signature = dilithium_sign(self.get_private_signature_key(), keys)
+            timeTaken = time.time() - start_time
+            file = open("dilithium-sign-time.txt","a")
+            file.write(f"\n{str(timeTaken)}")
+            file.close()
+        elif self.signatureType == 'SPHINCS':
+            start_time = time.time()
+            signature = sphincs_sign(self.get_private_signature_key(), keys)
+            timeTaken = time.time() - start_time
+            file = open("sphincs-sign-time.txt","a")
+            file.write(f"\n{str(timeTaken)}")
+            file.close()
+        elif self.signatureType == 'ECDSA':
+            start_time = time.time()
+            signature = self.get_private_signature_key().sign(keys, ec.ECDSA(hashes.SHA256()))
+            timeTaken = time.time() - start_time
+            file = open("ECDSA-sign-time.txt","a")
+            file.write(f"\n{str(timeTaken)}")
+            file.close()
+        print("Signature gen time taken: %s seconds" % (time.time() - start_time))
+        snapshot = tracemalloc.take_snapshot()
+        print("\n\nMemory data for signature gen:")
+        self.display_memory(snapshot)
+        tracemalloc.stop()
+        keys += signature
 
-            print("Sending key")
-            size = len(keys)
-            print(size)
-            self.socket.send(keys)#Sends the serialized public keys
-            print("Key sent")
+        print("Sending key")
+        size = len(keys)
+        print(size)
+        self.socket.send(keys)#Sends the serialized public keys
+        print("Key sent")
 
-            packageSize = self.serializedCKeySize+self.qEncapKeySize+self.signatureSize
-            serializedKey = self.recvall(packageSize)#Recieves the server's public key package
-            print("Key successfully recieved")
-            peerSignature = serializedKey[(packageSize-self.signatureSize):]
-            keyPackage = serializedKey[:(packageSize-self.signatureSize)]
+        packageSize = self.serializedCKeySize+self.qEncapKeySize+self.signatureSize
+        serializedKey = self.recvall(packageSize)#Recieves the server's public key package
+        print("Key successfully recieved")
+        peerSignature = serializedKey[(packageSize-self.signatureSize):]
+        keyPackage = serializedKey[:(packageSize-self.signatureSize)]
 
-            if self.signatureType == 'DILITHIUM':
-                assert dilithium_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
-            elif self.signatureType == 'SPHINCS':
-                assert sphincs_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
-            elif self.signatureType == 'ECDSA':
-                self.get_peer_public_signature_key().verify(signature, keyPackage, ec.ECDSA(hashes.SHA256()))
-            keys += signature
-            print("Digital signature valid!")
+        tracemalloc.start()
+        if self.signatureType == 'DILITHIUM':
+            start_time = time.time()
+            assert dilithium_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+            timeTaken = time.time() - start_time
+            file = open("dilithium-verify-time.txt","a")
+            file.write(f"\n{str(timeTaken)}")
+            file.close()
+        elif self.signatureType == 'SPHINCS':
+            start_time = time.time()
+            assert sphincs_verify(self.get_peer_public_signature_key(), keyPackage, peerSignature)
+            timeTaken = time.time() - start_time
+            file = open("sphincs-verify-time.txt","a")
+            file.write(f"\n{str(timeTaken)}")
+            file.close()
+        elif self.signatureType == 'ECDSA':
+            start_time = time.time()
+            self.get_peer_public_signature_key().verify(signature, keyPackage, ec.ECDSA(hashes.SHA256()))
+            timeTaken = time.time() - start_time
+            file = open("ecdsa-verify-time.txt","a")
+            file.write(f"\n{str(timeTaken)}")
+            file.close()
+        print("Signature verify time taken: %s seconds" % (time.time() - start_time))
+        snapshot = tracemalloc.take_snapshot()
+        print("\n\nMemory data for signature verification:")
+        self.display_memory(snapshot)
+        tracemalloc.stop()
+        keys += signature
+        print("Digital signature valid!")
 
-            encryptedQuantumKey = keyPackage[self.serializedCKeySize:]
-            if self.encryptionKeyType == 'KYBER':
-                quantumKey = kyber_decap(self.get_quantum_private_encryption_key(), encryptedQuantumKey)
-            elif self.encryptionKeyType == 'MCELIECE':
-                quantumKey = mceliece_decap(self.get_quantum_private_encryption_key(), encryptedQuantumKey)
-            classicalKey = self.protocol.deserialize(keyPackage[:self.serializedCKeySize])
-        except Exception as e:
-            print(f"Error: {e}")
-        finally:
-            self.socket.close()#Closes connection to the server
-            self.set_classical_peer_public_key(classicalKey)#Sets the server's classical public key as an instance variable
-            self.set_quantum_shared_key(quantumKey)#Sets the server's quantum public key as an instance variable
+        encryptedQuantumKey = keyPackage[self.serializedCKeySize:]
+        if self.encryptionKeyType == 'KYBER':
+            quantumKey = kyber_decap(self.get_quantum_private_encryption_key(), encryptedQuantumKey)
+        elif self.encryptionKeyType == 'MCELIECE':
+            quantumKey = mceliece_decap(self.get_quantum_private_encryption_key(), encryptedQuantumKey)
+        classicalKey = self.protocol.deserialize(keyPackage[:self.serializedCKeySize])
+        #except Exception as e:
+        #    print(f"Error: {e}")
+        #finally:
+        self.socket.close()#Closes connection to the server
+        self.set_classical_peer_public_key(classicalKey)#Sets the server's classical public key as an instance variable
+        self.set_quantum_shared_key(quantumKey)#Sets the server's quantum public key as an instance variable
 
     def run_client(self):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#Creates a new instance of the socket class
@@ -110,6 +151,7 @@ class Client(Node):
         print("Total runtime: %s seconds" % (time.time() - self.start_of_runtime))
         try:
             while True:
+                break
                 message = input("Enter message: ")#Asks the user to enter a message
                 encrypted = self.protocol.encrypt(message, self.get_symmetric_key())#Encrypts the message with the established shared key
                 client.send(encrypted)#Sends the encrypted message
@@ -123,4 +165,4 @@ class Client(Node):
             client.close()#Close connection to server
             print("Connection to server terminated\n\n")
 
-client = Client('KYBER', 'DILITHIUM')
+#client = Client()
