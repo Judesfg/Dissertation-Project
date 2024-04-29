@@ -134,7 +134,7 @@ class Protocol():
     
     def deserialize_private(self, x):
         """Given some PEM serialized input, returns a deserialized version."""
-        return serialization.load_pem_private_key(x, default_backend())
+        return serialization.load_pem_private_key(x, None, default_backend())
     
     def display_memory(self, snapshot, key_type='lineno', limit=5):
         snapshot = tracemalloc.take_snapshot()
