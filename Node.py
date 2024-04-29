@@ -261,6 +261,7 @@ class Node():
             elif self.nodeType == 'CLIENT':
                 fPublic = open("clientPublicECDSAKey.txt","w")
                 fPrivate = open("clientPrivateECDSAKey.txt","w")
+        print(f"\n\nSig Public Key Size: {len(publicKey)}\nSig Private Key Size: {len(privateKey)}")
         fPublic.write(str(self.protocol.serialize(publicKey)))
         fPrivate.write(str(self.protocol.serialize_private(privateKey)))
         fPublic.close()
