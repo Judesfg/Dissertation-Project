@@ -66,8 +66,6 @@ class Client(Node):
             keys += signature
 
             print("Sending key")
-            size = len(keys)
-            print(size)
             self.socket.send(keys)#Sends the serialized public keys
             print("Key sent")
 

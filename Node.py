@@ -153,14 +153,8 @@ class Node():
         corresponding public key. Then generates a keypair using a quantum
         primative."""
         
-        tracemalloc.start()
         privateDHKey = ec.generate_private_key(ec.SECP384R1())#Uses ECDH to generate a private key 384 bytes in size
         publicDHKey = privateDHKey.public_key()#Derives the corresponding public key
-        snap = tracemalloc.take_snapshot()
-        print("Memory allocation for ECDF keygen:")
-        self.display_memory(snap)
-        print("\n\n")
-        tracemalloc.stop()
 
         self.set_classical_asymmetric_encryption_keys(privateDHKey, publicDHKey)#Sets the classical public and private keys as instance variables
         print("Classical key pair successfully generated.")
