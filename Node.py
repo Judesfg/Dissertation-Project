@@ -152,8 +152,16 @@ class Node():
         """Randomly generates a private key using diffie-hellman and derives its 
         corresponding public key. Then generates a keypair using a quantum
         primative."""
+        
+        tracemalloc.start()
         privateDHKey = ec.generate_private_key(ec.SECP384R1())#Uses ECDH to generate a private key 384 bytes in size
         publicDHKey = privateDHKey.public_key()#Derives the corresponding public key
+        snap = tracemalloc.take_snapshot()
+        print("Memory allocation for ECDF keygen:")
+        self.display_memory(snap)
+        print("\n\n")
+        tracemalloc.stop()
+
         self.set_classical_asymmetric_encryption_keys(privateDHKey, publicDHKey)#Sets the classical public and private keys as instance variables
         print("Classical key pair successfully generated.")
         tracemalloc.start()
@@ -205,3 +213,30 @@ class Node():
             remaining -= len(data)
         return result
     
+    def display_memory(self, snapshot, key_type='lineno', limit=5):
+        snapshot = tracemalloc.take_snapshot()
+        snapshot = snapshot.filter_traces((
+            tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+            tracemalloc.Filter(False, "<frozen importlib._bootstrap_external>"),
+            tracemalloc.Filter(False, "<frozen abc>"),
+            tracemalloc.Filter(False, "<unknown>"),
+        ))
+        top_stats = snapshot.statistics(key_type)
+
+        print("Top %s lines" % limit)
+        for index, stat in enumerate(top_stats[:limit], 1):
+            frame = stat.traceback[0]
+            # replace "/path/to/module/file.py" with "module/file.py"
+            filename = os.sep.join(frame.filename.split(os.sep)[-2:])
+            print("#%s: %s:%s: %.1f KiB"
+                % (index, filename, frame.lineno, stat.size / 1024))
+            line = linecache.getline(frame.filename, frame.lineno).strip()
+            if line:
+                print('    %s' % line)
+
+        other = top_stats[limit:]
+        if other:
+            size = sum(stat.size for stat in other)
+            print("%s other: %.1f KiB" % (len(other), size / 1024))
+        total = sum(stat.size for stat in top_stats)
+        print("Total allocated size: %.1f KiB" % (total / 1024))
