@@ -220,6 +220,8 @@ class Node():
             elif self.nodeType == 'CLIENT':
                 fPublic = open("clientPublicDilithiumKey.txt","w")
                 fPrivate = open("clientPrivateDilithiumKey.txt","w")
+            fPublic.write(str(publicKey))
+            fPrivate.write(str(privateKey))
         elif self.signatureType == 'SPHINCS':
             tracemalloc.start()
             start_time = time.time()
@@ -240,6 +242,8 @@ class Node():
             elif self.nodeType == 'CLIENT':
                 fPublic = open("clientPublicSphincsKey.txt","w")
                 fPrivate = open("clientPrivateSphincsKey.txt","w")
+            fPublic.write(str(publicKey))
+            fPrivate.write(str(privateKey))
         elif self.signatureType == 'ECDSA':
             tracemalloc.start()
             start_time = time.time()
@@ -261,9 +265,9 @@ class Node():
             elif self.nodeType == 'CLIENT':
                 fPublic = open("clientPublicECDSAKey.txt","w")
                 fPrivate = open("clientPrivateECDSAKey.txt","w")
+            fPublic.write(str(self.protocol.serialize(publicKey)))
+            fPrivate.write(str(self.protocol.serialize_private(privateKey)))
         #print(f"\n\nSig Public Key Size: {len(publicKey)}\nSig Private Key Size: {len(privateKey)}")
-        fPublic.write(str(self.protocol.serialize(publicKey)))
-        fPrivate.write(str(self.protocol.serialize_private(privateKey)))
         fPublic.close()
         fPrivate.close()
 

@@ -15,5 +15,5 @@ from Server import *
 from Client import *
 
 for run in range(25):
-    Server('KYBER', 'ECDSA', run)
+    Server('KYBER', 'DILITHIUM', run)
 
