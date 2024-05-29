@@ -21,18 +21,20 @@ from SignatureKeys import *
 from Protocol import *
 
 class Client(Node):
-    def __init__(self, encType, sigType) -> None:
+    def __init__(self) -> None:
         """Creates an instance of the Client class, inheriting from the Node superclass."""
-        super().__init__(encType, sigType)
+        super().__init__()
         self.start_of_runtime = time.time()
         self.nodeType = 'CLIENT' #Create an ENUM for this
         self.generate_asymmetric_keys()
         signatureKeys = SignatureKeys()
         if self.signatureType == 'DILITHIUM':
-            self.set_asymmetric_signature_keys(signatureKeys.clientPrivateDilithiumKey, signatureKeys.clientPublicDilithiumKey)
+            self.set_asymmetric_signature_keys(signatureKeys.clientPrivateDilithiumKey, 
+                                               signatureKeys.clientPublicDilithiumKey)
             self.set_peer_public_signature_key(signatureKeys.serverPublicDilithiumKey)
         elif self.signatureType == 'SPHINCS':
-            self.set_asymmetric_signature_keys(signatureKeys.clientPrivateSphincsKey, signatureKeys.clientPublicSphincsKey)
+            self.set_asymmetric_signature_keys(signatureKeys.clientPrivateSphincsKey, 
+                                               signatureKeys.clientPublicSphincsKey)
             self.set_peer_public_signature_key(signatureKeys.serverPublicSphincsKey)
         elif self.signatureType == 'ECDSA':
             self.set_asymmetric_signature_keys(self.protocol.deserialize_private(signatureKeys.clientPrivateECDSAKey), 
@@ -121,4 +123,4 @@ class Client(Node):
             client.close()#Close connection to server
             print("Connection to server terminated\n\n")
 
-client = Client('KYBER', 'DILITHIUM')
+client = Client()

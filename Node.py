@@ -32,11 +32,11 @@ from pqcrypto.pqcrypto.sign.sphincs_sha256_256f_robust import sign as sphincs_si
 from pqcrypto.pqcrypto.sign.sphincs_sha256_256f_robust import verify as sphincs_verify
 
 class Node():
-    def __init__(self, encType, sigType) -> None:
+    def __init__(self) -> None:
         """Initialises an instance of the Node class."""
         self.protocol = Protocol()
-        self.encryptionKeyType = encType #KYBER or MCELIECE
-        self.signatureType = sigType #DILITHIUM or SPHINCS or ECDSA
+        self.encryptionKeyType = 'KYBER' #KYBER or MCELIECE
+        self.signatureType = 'DILITHIUM' #DILITHIUM or SPHINCS
         self.ip = "127.0.0.1"
         self.handshakePort = 8282
         self.port = 8000
@@ -55,7 +55,7 @@ class Node():
         elif self.signatureType == 'SPHINCS':
             self.signatureSize = 49216
         elif self.signatureType == 'ECDSA':
-            self.signatureSize = 104
+            self.signatureSize = 105
         self.qSharedKeySize = 32
 
     def set_symmetric_key(self, key):
@@ -142,9 +142,13 @@ class Node():
         variables."""
         peer_public_key = self.get_classical_peer_public_key()
         private_key = self.get_classical_private_encryption_key()
-        cSharedKey = private_key.exchange(ec.ECDH(), peer_public_key)#Performs elliptic curve diffie-hellman (ECDH) using the peer public key and own private key
+
+        #Performs elliptic curve diffie-hellman (ECDH) using the peer public key and own private key
+        cSharedKey = private_key.exchange(ec.ECDH(), peer_public_key)
         qSharedKey = self.get_quantum_shared_key()
-        derivedKey = HKDF(algorithm=hashes.SHA256(), length=32, salt=qSharedKey, info=b'handshake data').derive(cSharedKey)#Uses a key derivation function (HKDF) to generate the final shared key
+        
+        #Uses a key derivation function (HKDF) to generate the final shared key
+        derivedKey = HKDF(algorithm=hashes.SHA256(), length=32, salt=qSharedKey, info=b'handshake data').derive(cSharedKey)
         self.set_symmetric_key(derivedKey)#Sets the derived key as an instance variable
         print(f"Symmetric key successfully derived...\nKey: {derivedKey}\n")
 
@@ -156,14 +160,17 @@ class Node():
         privateDHKey = ec.generate_private_key(ec.SECP384R1())#Uses ECDH to generate a private key 384 bytes in size
         publicDHKey = privateDHKey.public_key()#Derives the corresponding public key
 
-        self.set_classical_asymmetric_encryption_keys(privateDHKey, publicDHKey)#Sets the classical public and private keys as instance variables
+        #Sets the classical public and private keys as instance variables
+        self.set_classical_asymmetric_encryption_keys(privateDHKey, publicDHKey)
         print("Classical key pair successfully generated.")
         tracemalloc.start()
         if self.encryptionKeyType == 'KYBER':
             publicKey, privateKey = kyber_keypair()#Generates a quantum key pair using Kyber1024
         elif self.encryptionKeyType == 'MCELIECE':
             publicKey, privateKey = mceliece_keypair()#Generates a quantum key pair using McEliece348864
-        self.set_quantum_asymmetric_encryption_keys(privateKey, publicKey)#Sets the quantum public and private keys used for enryption as instance variables
+
+        #Sets the quantum public and private keys used for enryption as instance variables
+        self.set_quantum_asymmetric_encryption_keys(privateKey, publicKey)
         #self.setSignatureKeys()
         print("Quantum key pair successfully generated.")
 

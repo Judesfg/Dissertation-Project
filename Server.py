@@ -17,17 +17,19 @@ from Node import *
 from SignatureKeys import *
 
 class Server(Node):
-    def __init__(self, encType, sigType) -> None:
+    def __init__(self) -> None:
         """Creates an instance of the Server class, inheriting from the Node superclass"""
-        super().__init__(encType, sigType)
+        super().__init__()
         self.nodeType = 'SERVER' #Create an ENUM for this
         self.generate_asymmetric_keys()
         signatureKeys = SignatureKeys()
         if self.signatureType == 'DILITHIUM':
-            self.set_asymmetric_signature_keys(signatureKeys.serverPrivateDilithiumKey, signatureKeys.serverPublicDilithiumKey)
+            self.set_asymmetric_signature_keys(signatureKeys.serverPrivateDilithiumKey, 
+                                               signatureKeys.serverPublicDilithiumKey)
             self.set_peer_public_signature_key(signatureKeys.clientPublicDilithiumKey)
         elif self.signatureType == 'SPHINCS':
-            self.set_asymmetric_signature_keys(signatureKeys.serverPrivateSphincsKey, signatureKeys.serverPublicSphincsKey)
+            self.set_asymmetric_signature_keys(signatureKeys.serverPrivateSphincsKey, 
+                                               signatureKeys.serverPublicSphincsKey)
             self.set_peer_public_signature_key(signatureKeys.clientPublicSphincsKey)
         elif self.signatureType == 'ECDSA':
             self.set_asymmetric_signature_keys(self.protocol.deserialize_private(signatureKeys.serverPrivateECDSAKey), 
@@ -46,9 +48,13 @@ class Server(Node):
             serverSocket.bind((self.ip, self.handshakePort))#Binds the socket to the given ip address and port
             serverSocket.listen(0)#Server listens for activity on this port. The parameter 0 means there can be no backlog queue
             print(f"Listening for keys on {self.ip}:{self.handshakePort}.")
-            self.socket, bob_address = serverSocket.accept()#Once a client is detected, a new new instance of the socket class is created for it
+
+            #Once a client is detected, a new new instance of the socket class is created for it
+            self.socket, bob_address = serverSocket.accept()
             print("Connection accepted...")
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the client socket to use the same port more than once
+
+            #Allows the client socket to use the same port more than once
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             packageSize = self.serializedCKeySize+self.qPublicKeySize+self.signatureSize
             if self.signatureType == 'ECDSA':
                 serializedKey = self.socket.recv(packageSize)#Recieves the public key from the client
@@ -71,10 +77,8 @@ class Server(Node):
             cSerializedKey = self.protocol.serialize(self.get_classical_public_encryption_key())#Serializes classical public key
             if self.encryptionKeyType == 'KYBER':
                 encryptedQuantumKey, qSharedKey = kyber_encap(quantumKey)
-                print(f"ENCRYPTED KYBER SIZE: {len(encryptedQuantumKey)}")
             elif self.encryptionKeyType == 'MCELIECE':
                 encryptedQuantumKey, qSharedKey = mceliece_encap(quantumKey)
-                print(f"ENCRYPTED MCELIECE SIZE: {len(encryptedQuantumKey)}")
             keys = cSerializedKey+encryptedQuantumKey
             if self.signatureType == 'DILITHIUM':
                 signature = dilithium_sign(self.get_private_signature_key(), keys)
@@ -83,7 +87,6 @@ class Server(Node):
             elif self.signatureType == 'ECDSA':
                 signature = self.get_private_signature_key().sign(keys, ec.ECDSA(hashes.SHA256()))
             keys += signature
-            print(f"sent package size: {len(keys)}")
             self.socket.send(keys)#Server responds to the client with its own public key
         except Exception as e:
             print(f"Error: {e}")
@@ -103,17 +106,23 @@ class Server(Node):
             server.bind((self.ip, self.port))#Binds the socket to the given ip address and port
             server.listen(0)#Server listens for activity on this port. The parameter 0 means there can be no backlog queue
             print(f"Listening for requests on {self.ip}:{self.port}.")
-            client_socket, client_address = server.accept()#Once a client is detected, a new new instance of the socket class is created for it
+
+            #Once a client is detected, a new new instance of the socket class is created for it
+            client_socket, client_address = server.accept()
             client_socket.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)#Allows the socket to use the same port more than once
             print(f"Connected: {client_address[0]}:{client_address[1]}")
             while True:
                 request = client_socket.recv(1024)#Recieves an encrypted message from the client
                 decrypted = self.protocol.decrypt(request, self.get_symmetric_key())#Decrypts the message using its own shared key
                 if decrypted == "close":#If the message reads "closed"...
-                    encrypted = self.protocol.encrypt("close", self.get_symmetric_key())#...encrypts a response to the client also reading "closed"...
+
+                    #...encrypts a response to the client also reading "closed"...
+                    encrypted = self.protocol.encrypt("close", self.get_symmetric_key())
                     client_socket.send(encrypted)#...and sends it
                     break
-                encrypted = self.protocol.encrypt("Accepted", self.get_symmetric_key())#Encrypts an acknowledgment to the client
+
+                #Encrypts an acknowledgment to the client
+                encrypted = self.protocol.encrypt("Accepted", self.get_symmetric_key())
                 client_socket.send(encrypted)#Sends a response to the client
         except Exception as e:
             print(f"Error: {e}")
@@ -122,4 +131,4 @@ class Server(Node):
             print("Connection with client terminated\n\n")
             server.close()#Shuts down the server
 
-server = Server('KYBER', 'DILITHIUM')
+server = Server()

@@ -3,7 +3,6 @@
 This is the protocol class for my dissertation project. This is where much of the code for
 encrypting the connection between between a client and a server is written, alongside
 the code for Message Authentication, digital signatures and serialisation.
-Guide: https://pynacl.readthedocs.io/en/latest/public/
 
 Dissertation Title: An Analysis Of Post-Quantum Cryptographic Schemes For Real World Use
 Author: Jude Gibson
@@ -49,7 +48,7 @@ class Protocol():
         print(f"Base ciphertext: {encrypted}")
         encrypted += iv#Appends the initialisation vector to the encrypted message
         encrypted += certificate
-        print(f"Initial Vector: {iv}\nCertificate: {certificate}\nActual Ciphertext: {encrypted}")
+        print(f"Initial Vector: {iv}\nCertificate: {certificate}\Full Ciphertext: {encrypted}")
         return encrypted#Returns the encrypted message
 
     def decrypt(self, ciphertext, key):
@@ -64,7 +63,7 @@ class Protocol():
         print(f"\n\nBeginning Decryption...\n\nPassed ciphertext: {ciphertext}")
         messageSize = len(ciphertext)-48#Determines the size of the encrypted message without the IV and MAC
         ciphertext = ciphertext[0:messageSize]#Slices the ciphertext to retrieve just the encrypted message
-        print(f"Actual Ciphertext: {ciphertext}") 
+        print(f"Base Ciphertext: {ciphertext}") 
         print(f"Initial Vector: {iv}")
         cipher = Cipher(algorithms.AES(key), modes.CBC(iv))#Recreates the cipher that was used to encrypt the message
         decryptor = cipher.decryptor()#Creates a decryptor using the cipher
